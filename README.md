@@ -2,6 +2,17 @@
 
 **Ri April 2026**
 
+**Achtung - das ist noch nicht fertig, es werden erst zwei verschiedene USB-Mäuse unterstützt...**
+
+
+..
+..
+..
+..
+
+
+
+
 Dieses Projekt ermöglicht es, eine normale USB-Maus an einen **ESP32-S3** (N16R8 Board) anzuschließen und die Maus-Signale in das klassische MSX-Maus-Protokoll umzuwandeln.  
 Der Roland Sampler verwendet exakt dasselbe Protokoll wie alte MSX-Computer.
 
