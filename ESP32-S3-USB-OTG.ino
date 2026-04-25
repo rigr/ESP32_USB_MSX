@@ -273,7 +273,7 @@ public:
     }
 
     // =========================
-    // 3. devide → X / Y
+    // 3. devide → X / Y - some mice use two bytes per axis
     // =========================
     int half = count / 2;
 
