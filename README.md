@@ -5,7 +5,7 @@
 **Achtung - das ist noch nicht fertig, es werden erst zwei verschiedene USB-Mäuse unterstützt...**
 
 
-..
+**UPDATE: ESP32-S3-USB-OTG.ino sollte jetzt jede USB Maus unterstützen.**
 ..
 ..
 ..
