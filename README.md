@@ -26,7 +26,7 @@ Der Roland Sampler verwendet exakt dasselbe Protokoll wie alte MSX-Computer.
 
 ### Hardware
 
-- **ESP32-S3 N16R8** (Dual USB-Port Version empfohlen)
+- **ESP32-S3 N16R8** (Dual USB-Port Version empfohlen) - https://github.com/microrobotics/ESP32-S3-N16R8/blob/main/ESP32-S3-N16R8_User_Guide.pdf zeigt das layout.
 - USB-Maus (beliebige Standard-USB-Maus) über OTG-Adapter
 - Roland Sampler (oder MSX-Computer) mit Maus-Eingang (9pin)
 
