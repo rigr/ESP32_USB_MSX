@@ -55,7 +55,6 @@ USB: buttons=0x01(L  ), x=-3, y=1, wheel=0 Z:100%
 USB: buttons=0x00(   ), x=0, y=0, wheel=1 Z:120%
 text- `L` = Linke Taste gedrückt  
 - `R` = Rechte Taste gedrückt  
-- `M` = Mittlere Taste gedrückt  
 - `Z:` zeigt den aktuellen Zoom-Faktor in Prozent
 
 ### Zoom-Funktion
