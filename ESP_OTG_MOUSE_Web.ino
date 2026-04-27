@@ -1,8 +1,7 @@
 // =======================================================================
 // ESP32-S3 USB Mouse → Roland Sampler
 // ROBUST AUTO-LEARNING VERSION + WEB INTERFACE (on demand)
-// Web interface - accesspoint USB-MOUSE, PW: USB-MOUSE
-// 
+// MSX PART UNCHANGED
 //
 // Richard, 27.4.2026
 // =======================================================================
@@ -73,7 +72,7 @@ String currentInstruction = "";
 String statusMessage = "Bereit zum Starten...";
 bool collectingData = false;
 
-// ========================= USB HOST CLASS =========================
+// ========================= USB HOST CLASS (VOLLSTÄNDIG VORHER) =========================
 class MyEspUsbHost : public EspUsbHost {
 public:
   State state = IDLE;
@@ -288,7 +287,7 @@ public:
   }
 } usbHost;
 
-// ========================= WEB HANDLER =========================
+// ========================= WEB HANDLER (JETZT NACH usbHost) =========================
 void handleRoot() {
   String html = R"rawliteral(
 <!DOCTYPE html>
@@ -350,7 +349,7 @@ void handleNext() {
   webServer.send(303);
 }
 
-// ========================= nextStep =========================
+// ========================= nextStep Implementierung (nach Klassendefinition) =========================
 void MyEspUsbHost::nextStep() {
   ready = false;
   collectingData = true;
@@ -358,14 +357,11 @@ void MyEspUsbHost::nextStep() {
 
   switch (state) {
     case IDLE:
-      // Erster Schritt: Nur Anweisung, KEIN Sammeln, aber ready = true damit OK funktioniert
-      Serial.println("Step 1: Lift the mouse from the desk.");
+      Serial.println("Step 1: Lift mouse from desk (no movement).");
       currentInstruction = "1) Lift the mouse from the desk, so no movement is recognized.<br>Then press OK";
-      statusMessage = "Maus angehoben? → Drücken Sie OK / Weiter";
+      statusMessage = "Warte auf OK...";
       state = BUTTON_DETECT;
-      collecting = false;      // WICHTIG: Noch nicht sammeln
-      ready = true;            // Button/BOOT kann weitergehen
-      collectingData = false;
+      collecting = true;
       break;
 
     case BUTTON_DETECT:
@@ -373,7 +369,7 @@ void MyEspUsbHost::nextStep() {
       currentInstruction = "2) Click left and right mouse buttons several times.<br>Then confirm pressing OK";
       statusMessage = "Warte auf OK...";
       state = WHEEL;
-      collecting = true;       // Ab hier sammeln
+      collecting = true;
       break;
 
     case WHEEL:
@@ -386,7 +382,7 @@ void MyEspUsbHost::nextStep() {
 
     case XY:
       Serial.println("Step 4: Move mouse forward/back and left/right.");
-      currentInstruction = "4) Set the mouse on the table and move it forward and to the left and in the opposite direction.<br>Confirm pressing OK again.<br> After this step the mouse will restart.";
+      currentInstruction = "4) Set the mouse on the table and move it forward and to the left and in the opposite direction.<br>Confirm pressing OK again.";
       statusMessage = "Warte auf OK...";
       state = DONE;
       collecting = true;
@@ -398,9 +394,7 @@ void MyEspUsbHost::nextStep() {
       return;
   }
 
-  if (collecting) {
-    Serial.println(">>> Collecting data now... <<<\n");
-  }
+  Serial.println(">>> Collecting data now... <<<\n");
   updateWebInstruction();
 }
 
@@ -490,7 +484,7 @@ void loop() {
         Serial.println("\n=== STARTING CALIBRATION + WEB INTERFACE ===");
         startWebInterface();
         usbHost.state = IDLE;
-        usbHost.nextStep();        // Zeigt Schritt 1 an
+        usbHost.nextStep();        // zeigt Schritt 1 an
       } else if (usbHost.ready && !usbHost.collecting) {
         usbHost.nextStep();
       }
