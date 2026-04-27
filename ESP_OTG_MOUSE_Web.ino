@@ -1,7 +1,9 @@
 // =======================================================================
 // ESP32-S3 USB Mouse → Roland Sampler
 // ROBUST AUTO-LEARNING VERSION + WEB INTERFACE (on demand)
-// MSX PART UNCHANGED
+// MSX PART UNCHANGED from original BLE - Version in other repo
+//
+// https://github.com/rigr/ESP32_USB_MSX
 //
 // Richard, 27.4.2026
 // =======================================================================
@@ -56,6 +58,7 @@ Buffer buffers[17];
 // ========================= STATE =========================
 enum State {
   IDLE,
+  LIFT,
   BUTTON_DETECT,
   WHEEL,
   XY,
@@ -69,10 +72,10 @@ WebServer webServer(80);
 
 bool webActive = false;
 String currentInstruction = "";
-String statusMessage = "Bereit zum Starten...";
+String statusMessage = "Ready to start...";
 bool collectingData = false;
 
-// ========================= USB HOST CLASS (VOLLSTÄNDIG VORHER) =========================
+// ========================= USB HOST CLASS =========================
 class MyEspUsbHost : public EspUsbHost {
 public:
   State state = IDLE;
@@ -124,10 +127,16 @@ public:
       for (int b = 0; b < len; b++) {
         uint8_t f = buffers[len].data[0][b];
         for (int i = 1; i < buffers[len].count; i++) {
-          if (buffers[len].data[i][b] != f) { var++; break; }
+          if (buffers[len].data[i][b] != f) {
+            var++;
+            break;
+          }
         }
       }
-      if (var > bestScore) { bestScore = var; bestLen = len; }
+      if (var > bestScore) {
+        bestScore = var;
+        bestLen = len;
+      }
     }
     Serial.printf("Selected main len=%d\n", bestLen);
     return bestLen;
@@ -138,7 +147,10 @@ public:
       bool same = true;
       uint8_t v = buffers[len].data[0][b];
       for (int i = 1; i < buffers[len].count; i++) {
-        if (buffers[len].data[i][b] != v) { same = false; break; }
+        if (buffers[len].data[i][b] != v) {
+          same = false;
+          break;
+        }
       }
       mouseMap.constantMask[b] = same;
     }
@@ -184,7 +196,10 @@ public:
   }
 
   void detectXY(int len) {
-    struct Candidate { int index; int activity; };
+    struct Candidate {
+      int index;
+      int activity;
+    };
     Candidate candidates[MAX_LEN];
     int count = 0;
 
@@ -203,7 +218,10 @@ public:
     }
 
     Serial.printf("XY candidates found: %d\n", count);
-    if (count < 2) { Serial.println("ERROR: Not enough XY candidates!"); return; }
+    if (count < 2) {
+      Serial.println("ERROR: Not enough XY candidates!");
+      return;
+    }
 
     for (int i = 0; i < count - 1; i++) {
       for (int j = i + 1; j < count; j++) {
@@ -230,8 +248,8 @@ public:
 
     switch (state) {
       case BUTTON_DETECT: detectButtons(len); break;
-      case WHEEL:         detectWheel(len);   break;
-      case XY:            detectXY(len);      break;
+      case WHEEL: detectWheel(len); break;
+      case XY: detectXY(len); break;
       default: break;
     }
   }
@@ -248,9 +266,10 @@ public:
     Serial.printf("len=%d btn=%d wheel=%d x=%d y=%d\n",
                   mouseMap.mainLen, mouseMap.btnByte, mouseMap.wheelByte,
                   mouseMap.xByte, mouseMap.yByte);
+    Serial.println("\n===== RESTARTING NOW =====");              
 
-    currentInstruction = "Kalibrierung erfolgreich abgeschlossen!<br>Das Gerät startet neu...";
-    statusMessage = "Fertig";
+    currentInstruction = "Calibration successfully finished<br>ESP32 restarting now...";
+    statusMessage = "Ready";
     collectingData = false;
     delay(1500);
     ESP.restart();
@@ -274,20 +293,23 @@ public:
     Serial.printf(" - Mouse %c%c - x=%d y=%d Zoom=%d%%\n",
                   L ? 'L' : ' ', R ? 'R' : ' ', x, y, (int)(20.0 / scale * 100));
 
-    lastX = x; lastY = y; leftBtn = L; rightBtn = R;
+    lastX = x;
+    lastY = y;
+    leftBtn = L;
+    rightBtn = R;
   }
 
   void updateWebInstruction() {
     if (collecting) {
       int currentLen = (mouseMap.mainLen > 0) ? mouseMap.mainLen : 8;
-      statusMessage = "Daten werden gesammelt... (" + String(buffers[currentLen].count) + "/" + String(MAX_SAMPLES) + ")";
+      statusMessage = "Collecting data... (" + String(buffers[currentLen].count) + "/" + String(MAX_SAMPLES) + ")";
     } else {
-      statusMessage = "Bereit – drücken Sie OK / Weiter";
+      statusMessage = "READY - press OK";
     }
   }
 } usbHost;
 
-// ========================= WEB HANDLER (JETZT NACH usbHost) =========================
+// ========================= WEB HANDLER =========================
 void handleRoot() {
   String html = R"rawliteral(
 <!DOCTYPE html>
@@ -327,7 +349,7 @@ void handleRoot() {
     <form action="/next" method="POST">
       <button type="submit" )rawliteral";
   if (collectingData) html += "disabled";
-  html += R"rawliteral(>OK / Weiter</button>
+  html += R"rawliteral(> OK </button>
     </form>
     <div class="footer">
       Richard - 27.4.2026<br>
@@ -342,32 +364,36 @@ void handleRoot() {
 }
 
 void handleNext() {
-  if (webActive && !collectingData && usbHost.ready) {
+  if (webActive && !collectingData && (usbHost.ready || usbHost.state == LIFT)) {  // <<< FIX
     usbHost.nextStep();
   }
   webServer.sendHeader("Location", "/");
   webServer.send(303);
 }
 
-// ========================= nextStep Implementierung (nach Klassendefinition) =========================
+/*
+// ========================= nextStep Implementierung =========================
 void MyEspUsbHost::nextStep() {
   ready = false;
   collectingData = true;
+
   for (int i = 0; i < 17; i++) buffers[i].count = 0;
 
   switch (state) {
+  
+    // First
     case IDLE:
       Serial.println("Step 1: Lift mouse from desk (no movement).");
-      currentInstruction = "1) Lift the mouse from the desk, so no movement is recognized.<br>Then press OK";
-      statusMessage = "Warte auf OK...";
+      currentInstruction = "For calibration we have to go through some steps now. Please follow exactly: <br> 1) Lift the mouse from the desk, so no movement is recognized.<br>Then press OK";
+      statusMessage = "Waiting for OK";
       state = BUTTON_DETECT;
-      collecting = true;
+      collecting = true;    //ri   ------
       break;
 
     case BUTTON_DETECT:
       Serial.println("Step 2: Click left and right mouse buttons several times.");
       currentInstruction = "2) Click left and right mouse buttons several times.<br>Then confirm pressing OK";
-      statusMessage = "Warte auf OK...";
+      statusMessage = "Waiting for OK";
       state = WHEEL;
       collecting = true;
       break;
@@ -375,7 +401,7 @@ void MyEspUsbHost::nextStep() {
     case WHEEL:
       Serial.println("Step 3: Move scrollwheel UP and DOWN several times.");
       currentInstruction = "3) Move scrollwheel UP and DOWN several times.<br>Then confirm pressing OK";
-      statusMessage = "Warte auf OK...";
+      statusMessage = "Waiting for ...";
       state = XY;
       collecting = true;
       break;
@@ -383,7 +409,7 @@ void MyEspUsbHost::nextStep() {
     case XY:
       Serial.println("Step 4: Move mouse forward/back and left/right.");
       currentInstruction = "4) Set the mouse on the table and move it forward and to the left and in the opposite direction.<br>Confirm pressing OK again.";
-      statusMessage = "Warte auf OK...";
+      statusMessage = "Waiting for OK...";
       state = DONE;
       collecting = true;
       break;
@@ -397,24 +423,108 @@ void MyEspUsbHost::nextStep() {
   Serial.println(">>> Collecting data now... <<<\n");
   updateWebInstruction();
 }
+*/
+void MyEspUsbHost::nextStep() {
+  ready = false;
+  collectingData = false;
+
+  for (int i = 0; i < 17; i++) buffers[i].count = 0;
+
+  switch (state) {
+
+    // ================= FIRST ENTRY =================
+    case IDLE:
+      Serial.println("Step 0: Lift mouse (NO DATA COLLECTION), then press BOOT");
+      currentInstruction =
+        "For calibration we have to go through some steps now.<br><br>"
+        "<b>1) Lift the mouse from the desk so it is in the air.</b><br>"
+        "Do NOT move it.<br><br>"
+        "Then press BOOT on ESP32 or OK.";
+      statusMessage = "Waiting for confirmation...";
+      collecting = false;  // <<< WICHTIG
+      collectingData = false;
+      state = LIFT;
+      return;  // <<< KEIN Collecting!
+
+    // ================= CONFIRM LIFT =================
+    case LIFT:
+      Serial.println("Step 1: Detect buttons - click left and right mouse buttons several times.");
+      currentInstruction =
+        "2) Now click LEFT and RIGHT mouse buttons several times.<br>"
+        "Then press OK.";
+      statusMessage = "Collecting...";
+      state = BUTTON_DETECT;
+      collecting = true;
+      collectingData = true;
+      break;
+
+    case BUTTON_DETECT:
+      Serial.println("Step 2: Detect scroll wheel: move wheel up and down several times.");
+      currentInstruction =
+        "3) Move scrollwheel UP and DOWN several times.<br>"
+        "Then press OK.";
+      statusMessage = "Collecting...";
+      state = WHEEL;
+      collecting = true;
+      collectingData = true;
+      break;
+
+    case WHEEL:
+      Serial.println("Step 3: Detect XY movement: place mouse on desk and move to upper left and lower right corner.");
+      currentInstruction =
+        "4) Move mouse forward/back and left/right.<br>"
+        "Then press OK.";
+      statusMessage = "Collecting...";
+      state = XY;
+      collecting = true;
+      collectingData = true;
+      break;
+
+    case XY:
+      Serial.println("Finalizing calibration...");
+      finalize();
+      return;
+
+    case DONE:
+      return;
+  }
+
+  Serial.println(">>> Collecting data now... <<<\n");
+  updateWebInstruction();
+}
+
+
 
 // ========================= MSX PROTOKOLL =========================
-inline void lineLow(uint32_t mask) { GPIO.out_w1tc = mask; GPIO.enable_w1ts = mask; }
-inline void lineRelease(uint32_t mask) { GPIO.enable_w1tc = mask; }
+inline void lineLow(uint32_t mask) {
+  GPIO.out_w1tc = mask;
+  GPIO.enable_w1ts = mask;
+}
+inline void lineRelease(uint32_t mask) {
+  GPIO.enable_w1tc = mask;
+}
 
 void sendNibble(uint8_t n) {
   uint32_t lowMask = 0, relMask = 0;
-  if (n & 8) relMask |= B3; else lowMask |= B3;
-  if (n & 4) relMask |= B2; else lowMask |= B2;
-  if (n & 2) relMask |= B1; else lowMask |= B1;
-  if (n & 1) relMask |= B0; else lowMask |= B0;
-  GPIO.out_w1tc = lowMask; GPIO.enable_w1ts = lowMask; GPIO.enable_w1tc = relMask;
+  if (n & 8) relMask |= B3;
+  else lowMask |= B3;
+  if (n & 4) relMask |= B2;
+  else lowMask |= B2;
+  if (n & 2) relMask |= B1;
+  else lowMask |= B1;
+  if (n & 1) relMask |= B0;
+  else lowMask |= B0;
+  GPIO.out_w1tc = lowMask;
+  GPIO.enable_w1ts = lowMask;
+  GPIO.enable_w1tc = relMask;
 }
 
 void sendMSX(int8_t c) {
-  while (digitalRead(PIN_STROBE) == LOW);
+  while (digitalRead(PIN_STROBE) == LOW)
+    ;
   sendNibble((c >> 4) & 0xF);
-  while (digitalRead(PIN_STROBE) == HIGH);
+  while (digitalRead(PIN_STROBE) == HIGH)
+    ;
   sendNibble(c & 0xF);
 }
 
@@ -426,7 +536,7 @@ void startWebInterface() {
   if (webActive) return;
   WiFi.softAP(ap_ssid, ap_password);
   IPAddress myIP = WiFi.softAPIP();
-  Serial.print("Access Point gestartet → SSID: ");
+  Serial.print("Access Point is launched → SSID and password: ");
   Serial.println(ap_ssid);
   Serial.print("IP: ");
   Serial.println(myIP);
@@ -436,14 +546,14 @@ void startWebInterface() {
   webServer.begin();
 
   webActive = true;
-  Serial.println("Webinterface ist jetzt aktiv.");
+  Serial.println("Webinterface is active now.");
 }
 
 void setup() {
   Serial.begin(115200);
   Serial.println("Please wait..");
   delay(500);
-  Serial.println("OK..");
+  Serial.println("https://github.com/rigr/ESP32_USB_MSX");
 
   pinMode(0, INPUT_PULLUP);
 
@@ -457,9 +567,9 @@ void setup() {
 
   usbHost.begin();
 
-  currentInstruction = "Halte die BOOT-Taste am Board länger als 3 Sekunden,<br>um die Kalibrierung und das Webinterface zu starten.";
+  currentInstruction = "Press BOOT on esp32 board more than 3 seconds to enter calibration and to start webinterface.";
 
-  Serial.println("Halte die BOOT-Taste länger als 3 Sekunden zum Starten der Kalibrierung.");
+  Serial.println("Press BOOT on ESP32 more than 3 seconds to start calibration process.");
 }
 
 void loop() {
@@ -484,11 +594,11 @@ void loop() {
         Serial.println("\n=== STARTING CALIBRATION + WEB INTERFACE ===");
         startWebInterface();
         usbHost.state = IDLE;
-        usbHost.nextStep();        // zeigt Schritt 1 an
-      } else if (usbHost.ready && !usbHost.collecting) {
+        usbHost.nextStep();
+      } else if (!usbHost.collecting) {
         usbHost.nextStep();
       }
-    } else if (duration > 50 && webActive && usbHost.ready && !usbHost.collecting) {
+    } else if (duration > 50 && webActive && (!usbHost.collecting) && (usbHost.ready || usbHost.state == LIFT)) {  // <<< FIX
       usbHost.nextStep();
     }
   }
