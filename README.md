@@ -7,7 +7,10 @@
 
 **UPDATE: ESP32-S3-USB-OTG.ino sollte jetzt jede USB Maus unterstützen.**
 ..
+-----
 ..
+..
+**UPDATE 05-2026: https://github.com/rigr/ESP32_USB_MSX/blob/main/ESP32_USB_BLE_Roland.ino for BLE AND USB - not finally tested**
 ..
 
 
