@@ -1474,7 +1474,7 @@ void setupWebServer() {
     html += "<div class='data-row'><span class='data-label'>Pins:</span><span class='data-value'>Data: 14,13,12,11, Buttons: 8,3, Strobe: 46, Scan: 15, LED: 2</span></div>";
     html += "<div class='data-row'><span class='data-label'>GPIO Mode:</span><span class='data-value'>Direct Register Access synchronized to Strobe</span></div>";
     html += "<div class='data-row'><span class='data-label'>Uptime:</span><span class='data-value'>" + String(millis() / 1000) + "s</span></div>";
-    html += "<h4>https://github.com/rigr/ESP32_BLE_MSX";
+    html += "<h4>https://github.com/rigr/ESP32_USB_MSX";
     html += "</div>";
 
     html += "<script>setTimeout(() => location.reload(), 2000);</script>";
