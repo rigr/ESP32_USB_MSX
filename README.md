@@ -1,96 +1,98 @@
-# ESP32-S3 USB Maus → Roland Sampler / MSX-Protokoll
+# ESP32-S3 USB & BLE Mouse → Roland Sampler / MSX Protocol
+**RiGr – April 2026**
 
-**Ri April 2026**
-
-~~Achtung - das ist noch nicht fertig, es werden erst zwei verschiedene USB-Mäuse unterstützt...~~
-
-
-**UPDATE: ESP32-S3-USB-OTG.ino sollte jetzt jede USB Maus unterstützen.**
-..
------
-..
-..
-**UPDATE 05-2026: https://github.com/rigr/ESP32_USB_MSX/blob/main/ESP32_USB_BLE_Roland.ino for BLE AND USB - not finally tested**
-..
-
-
-
-
-Dieses Projekt ermöglicht es, eine normale USB-Maus an einen **ESP32-S3** (N16R8 Board) anzuschließen und die Maus-Signale in das klassische MSX-Maus-Protokoll umzuwandeln.  
-Der Roland Sampler verwendet exakt dasselbe Protokoll wie alte MSX-Computer.
-
-### Features
-
-- Direkte USB-Host-Unterstützung für USB-Mäuse
-- Stabiles MSX-Maus-Protokoll mit **direktem GPIO-Register-Zugriff** 
-- Mausbewegung wird auf Core 1 in einem dedizierten Task verarbeitet → minimal Jitter
-- Zoom-Funktion mit dem Mausrad (20 % – 200 %)
-- Serielle Ausgabe zur Fehlersuche
-
-### Hardware
-
-- **ESP32-S3 N16R8** (Dual USB-Port Version empfohlen) - https://github.com/microrobotics/ESP32-S3-N16R8/blob/main/ESP32-S3-N16R8_User_Guide.pdf zeigt das layout.
-- USB-Maus (beliebige Standard-USB-Maus) über OTG-Adapter
-- Roland Sampler (oder MSX-Computer) mit Maus-Eingang (9pin)
-
-**Wichtiger Hinweis zur Verkabelung:**
-- Der ESP32-S3 verwendet den **nativen USB-OTG-Port** (meist GPIO19 = D-, GPIO20 = D+).
-- Auf vielen N16R8-Boards muss ein **OTG-Jumper** gesetzt oder eine Lötbrücke geschlossen werden, damit der Port als Host mit 5 V funktioniert.
-
-### Pin-Belegung (ESP32-S3 → Sampler)
-
-| ESP32-S3 Pin | Funktion              | Sampler subd9f
-|--------------|-----------------------|---------------| 
-| GPIO 14      | MX0  – Data Bit 0     | Pin 1         |
-| GPIO 13      | MX1  – Data Bit 1     | Pin 2         |
-| GPIO 12      | MX2  – Data Bit 2     | Pin 3         |
-| GPIO 11      | MX3  – Data Bit 3     | Pin 4         |
-| Vin          | 5V                    | Pin 5         |
-| GPIO 8       | BTN_L – Linke Maustaste | Pin 6       |
-| GPIO 3       | BTN_R – Rechte Maustaste | Pin 7      |
-| GPIO 46      | STROBE / CS (Eingang) | Pin 8         |
-| GND          | Masse                 | Pin 9         |
-
-### Serielle Ausgabe
-
-Beispiel:
-USB: buttons=0x01(L  ), x=-3, y=1, wheel=0 Z:100%
-USB: buttons=0x00(   ), x=0, y=0, wheel=1 Z:120%
-text- `L` = Linke Taste gedrückt  
-- `R` = Rechte Taste gedrückt  
-- `Z:` zeigt den aktuellen Zoom-Faktor in Prozent
-
-### Zoom-Funktion
-
-- Mit dem **Mausrad** kannst du den Maus-Zoom zwischen **20 % und 200 %** einstellen.
-- Startwert ist **100 %**.
-
-### Danksagungen
-
-- **tanakamasayuki** – für die hervorragende [EspUsbHost](https://github.com/tanakamasayuki/EspUsbHost) Bibliothek
-- **NYYRIKKY** und **Peter Ullrich** – für die grundlegende Arbeit am MSX/Roland Maus-Protokoll
-- Original-MSX-Maus-Projekt, das BLE verwendet: https://github.com/rigr/ESP32_USB_MSX
-
-### Kompilieren & Flashen
-
-1. Installiere die Bibliothek **EspUsbHost** über den Arduino Bibliotheksverwalter oder direkt von GitHub.
-2. Wähle im Arduino IDE folgendes Board:
-   - **ESP32S3 Dev Module** (oder deine exakte Board-Definition)
-   - USB Mode: **Hardware CDC and JTAG**
-   - Flash Size: **16MB** (falls verfügbar)
-3. Lade den Sketch hoch.
-
-Der Sketch startet automatisch. Sobald eine USB-Maus erkannt wird, erscheinen Bewegungen und Klicks in der seriellen Konsole.
+**UPDATE 05-2026:** The sketch `ESP32_USB_BLE_Roland.ino` now supports **both USB and BLE mice**.  
+However, this version has **not yet been tested with the Roland Sampler**.
 
 ---
 
-Viel Erfolg und guten Sound mit deinem Roland Sampler!
+This project allows you to connect a standard USB or Bluetooth Low Energy (BLE) mouse to an **ESP32-S3** (N16R8 board) and convert the mouse signals into the classic MSX mouse protocol.  
+The Roland Sampler uses exactly the same protocol as old MSX computers.
+
+### Features
+- Direct USB-Host support for USB mice
+- BLE mouse support (via NimBLE)
+- Stable MSX mouse protocol with **direct GPIO register access**
+- Mouse movement processed on Core 1 in a dedicated task → minimal jitter
+- Zoom function using the mouse wheel (20 % – 200 %)
+- Serial output for debugging
+
+### Hardware
+- **ESP32-S3 N16R8** (Dual USB port version recommended)  
+  → See layout: [ESP32-S3-N16R8 User Guide](https://github.com/microrobotics/ESP32-S3-N16R8/blob/main/ESP32-S3-N16R8_User_Guide.pdf)
+- USB mouse (any standard USB mouse) via OTG adapter
+- BLE mouse
+- Roland Sampler (or MSX computer) with mouse input (9-pin)
+
+**Important Wiring Note:**
+- The ESP32-S3 uses the **native USB-OTG port** (usually GPIO19 = D-, GPIO20 = D+).
+- On many N16R8 boards you must set an **OTG jumper** or close a solder bridge so the port works as a host with 5 V supply.
+
+### Pin Assignment (ESP32-S3 → Sampler)
+
+| ESP32-S3 Pin | Function                  | Sampler Sub-D9F |
+|--------------|---------------------------|-----------------|
+| GPIO 14      | MX0 – Data Bit 0          | Pin 1           |
+| GPIO 13      | MX1 – Data Bit 1          | Pin 2           |
+| GPIO 12      | MX2 – Data Bit 2          | Pin 3           |
+| GPIO 11      | MX3 – Data Bit 3          | Pin 4           |
+| Vin          | 5V                        | Pin 5           |
+| GPIO 8       | BTN_L – Left Mouse Button | Pin 6           |
+| GPIO 3       | BTN_R – Right Mouse Button| Pin 7           |
+| GPIO 46      | STROBE / CS (Input)       | Pin 8           |
+| **GPIO 15**  | **Manual Scan Trigger**   | -               |
+| GND          | Ground                    | Pin 9           |
+
+> **GPIO 15 (D15)** is used as a **manual scan trigger** input.
+
+### Serial Output
+Example:
+
+USB: buttons=0x01(L ), x=-3, y=1, wheel=0 Z:100%
+
+USB: buttons=0x00(  ), x=0, y=0, wheel=1 Z:120%
+
+- `L` = Left button pressed  
+- `R` = Right button pressed  
+- `Z:` shows the current zoom factor in percent
+
+### Zoom Function
+- Use the **mouse wheel** to adjust the mouse zoom between **20 % and 200 %**.
+- Default value is **100 %**.
+
+### Important Library Note
+This project requires the **EspUsbHost** library by tanakamasayuki.
+
+**You must manually copy the two files**  
+`EspUsbHost.cpp` and `EspUsbHost.h`  
+from this repository:  
+→ https://github.com/tanakamasayuki/EspUsbHost
+
+**Both files must be placed in the same folder as your `ESP32_USB_BLE_Roland.ino` file.**
+
+### Compiling & Flashing
+1. Install the remaining required libraries via the Arduino Library Manager.
+2. Copy `EspUsbHost.cpp` and `EspUsbHost.h` into the sketch folder (see note above).
+3. In Arduino IDE select:
+   - Board: **ESP32S3 Dev Module**
+   - USB Mode: **Hardware CDC and JTAG**
+   - Flash Size: **16MB** (if available)
+4. Upload the sketch.
+
+The sketch starts automatically. Once a USB or BLE mouse is detected, movements and clicks will appear in the serial monitor.
+To lanuch the web interface you need to press the BOOT button more than 3 seconds. You can then adjust all sorts of settings and calibrate the mouse connected.
+
+---
+
+Good luck and enjoy your Roland Sampler!
 
 ## License
+This project is released under the **MIT License**.
 
-Dieses Projekt folgt der MIT License
+## Acknowledgments
+- **tanakamasayuki** – for the excellent [EspUsbHost](https://github.com/tanakamasayuki/EspUsbHost) library
+- **NYYRIKKY** and **Peter Ullrich** – for their foundational work on the MSX/Roland mouse protocol
+- Original BLE MSX mouse project: https://github.com/rigr/ESP32_USB_MSX
 
 ## Contribution
-
-Erste Unterstützung kam von NYYRIKKY und Peter Ullrich - danke euch beiden!
-
+Initial support came from NYYRIKKY and Peter Ullrich – thank you both!
