@@ -12,7 +12,7 @@
 // rigr 2026-05-13
 //
 // Still needs some more tests to check, if Roland Sampler will really accept the mouse
-// Feel free to inform me if it works or if it does'nt. Use "issues" on github
+// Feel free to inform me if it works or if it doesn't. Use "issues" on github
 //
 // =================================================================
 
