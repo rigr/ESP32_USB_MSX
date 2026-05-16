@@ -590,7 +590,7 @@ void updateLED() {
   } else if (selectingDevice) {
     interval = 250;
   } else if (connected) {
-    led.setPixelColor(0, led.Color(0, 0, 25));  // blau an
+    led.setPixelColor(0, led.Color(0, 0, 25));  // blue
     led.show();
     return;
   } else {
@@ -611,7 +611,7 @@ void updateLED() {
 }
 
 // =================================================================
-// Calibration Mode Start
+// web server start
 // =================================================================
 void startCalibrationMode() {
   if (calibrationMode) return;
@@ -627,19 +627,17 @@ void startCalibrationMode() {
   setupWebServer();
   httpUpdater.setup(&server);
   Serial.println("OTA Update ready");
-
   server.begin();
 
-  
   for (int i = 0; i < 3; i++) {
-    led.setPixelColor(0, led.Color(25, 8, 0));
+    led.setPixelColor(0, led.Color(100, 32, 0)); // kind of orange
     led.show();
     delay(100);
     led.clear();
     led.show();
     delay(100);
   }
-
+  
   Serial.println("Calibration web interface started");
   Serial.println("Connect to WiFi: ESP32_MOUSE / 1234567890");
   Serial.println("Open: http://" + IP.toString());
