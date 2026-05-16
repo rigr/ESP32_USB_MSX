@@ -35,6 +35,9 @@
 #include "soc/gpio_reg.h"
 #include <vector>
 #include "freertos/semphr.h"
+#include <Adafruit_NeoPixel.h>
+
+Adafruit_NeoPixel led(1, 48, NEO_GRB + NEO_KHZ800);
 
 #define MAX_SAMPLES 50
 #define MAX_LEN 16
@@ -88,7 +91,7 @@ struct HIDMouseFormat {
 HIDMouseFormat hidFmt;
 
 // =================================================================
-// CALIBRATION - Auto Learning 
+// CALIBRATION - Auto Learning
 // =================================================================
 struct MouseMapping {
   uint8_t mainLen;
@@ -153,11 +156,10 @@ const uint8_t MX0_PIN = 14;
 const uint8_t MX1_PIN = 13;
 const uint8_t MX2_PIN = 12;
 const uint8_t MX3_PIN = 11;
-const uint8_t MX4_PIN =  8;
-const uint8_t MX5_PIN =  3;
-const uint8_t CS_PIN =  46;
+const uint8_t MX4_PIN = 8;
+const uint8_t MX5_PIN = 3;
+const uint8_t CS_PIN = 46;
 const uint8_t MAN_SCAN = 15;
-const uint8_t LED_PIN =  2;
 const uint8_t BOOT_PIN = 0;
 
 #define B0 (1UL << MX0_PIN)
@@ -199,7 +201,7 @@ Preferences prefs;
 const char* NVS_NAMESPACE = "msxmous";
 
 // =================================================================
-// USB HOST CLASS 
+// USB HOST CLASS
 // =================================================================
 class MyEspUsbHost : public EspUsbHost {
 public:
@@ -426,13 +428,13 @@ public:
     int8_t w = (int8_t)d[mouseMap.wheelByte];
 
     if (w != 0) {
-      // if (scaleMutex != NULL) 
+      // if (scaleMutex != NULL)
       xSemaphoreTake(scaleMutex, portMAX_DELAY);
       currentScale -= w;
       if (currentScale < minScale) currentScale = minScale;
       if (currentScale > maxScale) currentScale = maxScale;
       scaleChanged = true;
-      // if (scaleMutex != NULL) 
+      // if (scaleMutex != NULL)
       xSemaphoreGive(scaleMutex);
     }
 
@@ -555,10 +557,13 @@ void checkLongButtonPresses() {
         WiFi.softAPdisconnect(true);
         webServerActive = false;
         calibrationMode = false;
+
         for (int i = 0; i < 2; i++) {
-          digitalWrite(LED_PIN, HIGH);
+          led.setPixelColor(0, led.Color(255, 0, 0));
+          led.show();
           delay(500);
-          digitalWrite(LED_PIN, LOW);
+          led.clear();
+          led.show();
           delay(500);
         }
         Serial.println("Web server stopped");
@@ -585,17 +590,23 @@ void updateLED() {
   } else if (selectingDevice) {
     interval = 250;
   } else if (connected) {
-    digitalWrite(LED_PIN, HIGH);
+    led.setPixelColor(0, led.Color(0, 0, 25));  // blau an
+    led.show();
     return;
   } else {
-    digitalWrite(LED_PIN, LOW);
+    led.clear();  // aus
+    led.show();
     return;
   }
-
   if (millis() - lastBlink > interval) {
     lastBlink = millis();
     state = !state;
-    digitalWrite(LED_PIN, state);
+    if (state) {
+      led.setPixelColor(0, led.Color(0, 0, 25));  // blau
+    } else {
+      led.clear();
+    }
+    led.show();
   }
 }
 
@@ -619,15 +630,18 @@ void startCalibrationMode() {
 
   server.begin();
 
+  
   for (int i = 0; i < 3; i++) {
-    digitalWrite(LED_PIN, HIGH);
+    led.setPixelColor(0, led.Color(25, 8, 0));
+    led.show();
     delay(100);
-    digitalWrite(LED_PIN, LOW);
+    led.clear();
+    led.show();
     delay(100);
   }
 
   Serial.println("Calibration web interface started");
-  Serial.println("Connect to WiFi: ESP32_MOUSE / ESP32_MOUSE");
+  Serial.println("Connect to WiFi: ESP32_MOUSE / 1234567890");
   Serial.println("Open: http://" + IP.toString());
 }
 
@@ -757,7 +771,7 @@ void msxProtocolTask(void* parameter) {
 
   Serial.println("MSX Protocol Task started on Core 1");
   Serial.println("Pin Configuration:");
-  Serial.println("MX0=14, MX1=13, MX2=12, MX3=11, MX4=8(L), MX5=3(R), CS=46, SCAN=15, LED=2");
+  Serial.println("MX0=14, MX1=13, MX2=12, MX3=11, MX4=8(L), MX5=3(R), CS=46, SCAN=15");
   Serial.println(" ");
   Serial.print("Initial Zoom Factor: ");
   Serial.print((int)currentScale);
@@ -873,27 +887,22 @@ void parseHIDReport(uint8_t* data, size_t len) {
       reportID = data[++i];
       Serial.printf("  Found Report ID: %d", reportID);
       bitOffset = 0;
-    }
-    else if (b == 0x05) {
+    } else if (b == 0x05) {
       currentUsagePage = data[++i];
       Serial.printf("  Usage Page: 0x%02X", currentUsagePage);
-    }
-    else if (b == 0x09) {
+    } else if (b == 0x09) {
       if (usageCount < 16) {
         uint8_t usage = data[++i];
         usageList[usageCount++] = usage;
         Serial.printf("  Usage: 0x%02X", usage);
       }
-    }
-    else if (b == 0x75) {
+    } else if (b == 0x75) {
       reportSize = data[++i];
       Serial.printf("  Report Size: %d", reportSize);
-    }
-    else if (b == 0x95) {
+    } else if (b == 0x95) {
       reportCount = data[++i];
       Serial.printf("  Report Count: %d", reportCount);
-    }
-    else if (b == 0x81) {
+    } else if (b == 0x81) {
       uint8_t input = data[++i];
       Serial.printf("  Input found with properties: 0x%02X", input);
 
@@ -904,17 +913,14 @@ void parseHIDReport(uint8_t* data, size_t len) {
           if (u == 0x30) {
             hidFmt.x = { u, reportID, bitOffset, reportSize, true };
             Serial.printf("  X-Axis @bitOffset=%d, bitSize=%d", hidFmt.x.bitOffset, hidFmt.x.bitSize);
-          }
-          else if (u == 0x31) {
+          } else if (u == 0x31) {
             hidFmt.y = { u, reportID, bitOffset, reportSize, true };
             Serial.printf("  Y-Axis @bitOffset=%d, bitSize=%d", hidFmt.y.bitOffset, hidFmt.y.bitSize);
-          }
-          else if (u == 0x38) {
+          } else if (u == 0x38) {
             hidFmt.wheel = { u, reportID, bitOffset, reportSize, true };
             Serial.printf("  Wheel @bitOffset=%d, bitSize=%d", hidFmt.wheel.bitOffset, hidFmt.wheel.bitSize);
           }
-        }
-        else if (currentUsagePage == 0x09) {
+        } else if (currentUsagePage == 0x09) {
           hidFmt.hasExplicitButtons = true;
           if (u >= 0x01 && u <= 0x08) {
             if (u == 0x01) {
@@ -962,8 +968,11 @@ void parseHIDReport(uint8_t* data, size_t len) {
 }
 
 void interpretMouseData(uint8_t* data, size_t len, int16_t& x, int16_t& y, int8_t& wheel, bool& leftButton, bool& rightButton) {
-  x = 0; y = 0; wheel = 0;
-  leftButton = false; rightButton = false;
+  x = 0;
+  y = 0;
+  wheel = 0;
+  leftButton = false;
+  rightButton = false;
 
   if (len == 0) return;
 
@@ -1070,8 +1079,7 @@ void notifyCB(NimBLERemoteCharacteristic* chr, uint8_t* data, size_t len, bool i
     /* debug output, not needed 
     Serial.print(" - HID PARSER: ");
     */
-    }
-  else {
+  } else {
     Serial.println("No valid format! Use calibration.");
     return;
   }
@@ -1083,7 +1091,7 @@ void notifyCB(NimBLERemoteCharacteristic* chr, uint8_t* data, size_t len, bool i
   bool prevRightBtn = rightBtn;
 
   // if (scaleMutex != NULL) {
-    xSemaphoreTake(scaleMutex, portMAX_DELAY);
+  xSemaphoreTake(scaleMutex, portMAX_DELAY);
   // }
 
   lastX = x;
@@ -1093,7 +1101,7 @@ void notifyCB(NimBLERemoteCharacteristic* chr, uint8_t* data, size_t len, bool i
   lastMouseUpdate = millis();
 
   // if (scaleMutex != NULL) {
-    xSemaphoreGive(scaleMutex);
+  xSemaphoreGive(scaleMutex);
   // }
 
   // =========================
@@ -1101,7 +1109,7 @@ void notifyCB(NimBLERemoteCharacteristic* chr, uint8_t* data, size_t len, bool i
   // =========================
   if (wheel != 0) {
     // if (scaleMutex != NULL) {
-      xSemaphoreTake(scaleMutex, portMAX_DELAY);
+    xSemaphoreTake(scaleMutex, portMAX_DELAY);
     // }
 
     char oldScale = currentScale;
@@ -1118,11 +1126,11 @@ void notifyCB(NimBLERemoteCharacteristic* chr, uint8_t* data, size_t len, bool i
       Serial.print(" (");
       Serial.print((int)(20.0 / currentScale * 100));
       Serial.print("%)");
-      */ 
+      */
     }
 
     // if (scaleMutex != NULL) {
-      xSemaphoreGive(scaleMutex);
+    xSemaphoreGive(scaleMutex);
     // }
   }
 
@@ -1268,7 +1276,7 @@ void calibrationNextStep() {
   switch (calState) {
     case CAL_IDLE:
       Serial.println("Step 0: Lift mouse (NO DATA COLLECTION), then press BOOT or OK");
-      calInstruction = 
+      calInstruction =
         "<h2>Calibration - Step 1 of 4</h2>"
         "<b>1) Lift the mouse from the desk so it is in the air.</b><br>"
         "Do NOT move it.<br><br>"
@@ -1279,7 +1287,7 @@ void calibrationNextStep() {
 
     case CAL_LIFT:
       Serial.println("Step 1: Detect buttons - click left and right mouse buttons several times.");
-      calInstruction = 
+      calInstruction =
         "<h2>Calibration - Step 2 of 4</h2>"
         "<b>2) Now click LEFT and RIGHT mouse buttons several times.</b><br>"
         "Keep clicking until counter reaches 50.<br><br>"
@@ -1292,7 +1300,7 @@ void calibrationNextStep() {
 
     case CAL_BUTTON_DETECT:
       Serial.println("Step 2: Detect scroll wheel: move wheel up and down several times.");
-      calInstruction = 
+      calInstruction =
         "<h2>Calibration - Step 3 of 4</h2>"
         "<b>3) Move scrollwheel UP and DOWN several times.</b><br>"
         "Keep scrolling until counter reaches 50.<br><br>"
@@ -1305,7 +1313,7 @@ void calibrationNextStep() {
 
     case CAL_WHEEL:
       Serial.println("Step 3: Detect XY movement: place mouse on desk and move to upper left and lower right corner.");
-      calInstruction = 
+      calInstruction =
         "<h2>Calibration - Step 4 of 4</h2>"
         "<b>4) Move mouse forward/back and left/right.</b><br>"
         "Keep moving until counter reaches 50.<br><br>"
@@ -1480,7 +1488,7 @@ void setupWebServer() {
     html += "<div class='section'>";
     html += "<h3>DEVICE INFO</h3>";
     html += "<div class='data-row'><span class='data-label'>Board:</span><span class='data-value'>" + String(ssid) + "</span></div>";
-    html += "<div class='data-row'><span class='data-label'>Pins:</span><span class='data-value'>Data: 14,13,12,11, Buttons: 8,3, Strobe: 46, Scan: 15, LED: 2</span></div>";
+    html += "<div class='data-row'><span class='data-label'>Pins:</span><span class='data-value'>Data: 14,13,12,11, Buttons: 8,3, Strobe: 46, Scan: 15</span></div>";
     html += "<div class='data-row'><span class='data-label'>GPIO Mode:</span><span class='data-value'>Direct Register Access synchronized to Strobe</span></div>";
     html += "<div class='data-row'><span class='data-label'>Uptime:</span><span class='data-value'>" + String(millis() / 1000) + "s</span></div>";
     html += "<h4>https://github.com/rigr/ESP32_USB_MSX";
@@ -1614,7 +1622,7 @@ void setupWebServer() {
   // Zoom Controls
   server.on("/zoom_out", HTTP_GET, []() {
     // if (scaleMutex != NULL) {
-      xSemaphoreTake(scaleMutex, portMAX_DELAY);
+    xSemaphoreTake(scaleMutex, portMAX_DELAY);
     // }
     if (currentScale > minScale) {
       currentScale--;
@@ -1626,7 +1634,7 @@ void setupWebServer() {
       Serial.print("%)");
     }
     // if (scaleMutex != NULL) {
-      xSemaphoreGive(scaleMutex);
+    xSemaphoreGive(scaleMutex);
     // }
     server.sendHeader("Location", "/");
     server.send(302, "text/plain", "Redirecting...");
@@ -1634,7 +1642,7 @@ void setupWebServer() {
 
   server.on("/zoom_in", HTTP_GET, []() {
     // if (scaleMutex != NULL) {
-      xSemaphoreTake(scaleMutex, portMAX_DELAY);
+    xSemaphoreTake(scaleMutex, portMAX_DELAY);
     // }
     if (currentScale < maxScale) {
       currentScale++;
@@ -1646,7 +1654,7 @@ void setupWebServer() {
       Serial.print("%)");
     }
     // if (scaleMutex != NULL) {
-      xSemaphoreGive(scaleMutex);
+    xSemaphoreGive(scaleMutex);
     // }
     server.sendHeader("Location", "/");
     server.send(302, "text/plain", "Redirecting...");
@@ -1654,7 +1662,7 @@ void setupWebServer() {
 
   server.on("/zoom_reset", HTTP_GET, []() {
     // if (scaleMutex != NULL) {
-      xSemaphoreTake(scaleMutex, portMAX_DELAY);
+    xSemaphoreTake(scaleMutex, portMAX_DELAY);
     // }
     currentScale = 15;
     scaleChanged = true;
@@ -1664,7 +1672,7 @@ void setupWebServer() {
     Serial.print((int)(20.0 / currentScale * 100));
     Serial.print("%)");
     // if (scaleMutex != NULL) {
-      xSemaphoreGive(scaleMutex);
+    xSemaphoreGive(scaleMutex);
     // }
     server.sendHeader("Location", "/");
     server.send(302, "text/plain", "Redirecting...");
@@ -1675,7 +1683,7 @@ void setupWebServer() {
       int newScale = server.arg("value").toInt();
       if (newScale >= minScale && newScale <= maxScale) {
         // if (scaleMutex != NULL) {
-          xSemaphoreTake(scaleMutex, portMAX_DELAY);
+        xSemaphoreTake(scaleMutex, portMAX_DELAY);
         // }
         currentScale = newScale;
         scaleChanged = true;
@@ -1685,7 +1693,7 @@ void setupWebServer() {
         Serial.print((int)(20.0 / currentScale * 100));
         Serial.print("%)");
         // if (scaleMutex != NULL) {
-          xSemaphoreGive(scaleMutex);
+        xSemaphoreGive(scaleMutex);
         // }
       }
     }
@@ -1794,7 +1802,7 @@ void handleSerialCommand(String cmd) {
     ESP.restart();
   } else if (cmd.equals("scale")) {
     // if (scaleMutex != NULL) {
-      xSemaphoreTake(scaleMutex, portMAX_DELAY);
+    xSemaphoreTake(scaleMutex, portMAX_DELAY);
     // }
     Serial.print("Current Factor: ");
     Serial.print((int)currentScale);
@@ -1802,13 +1810,13 @@ void handleSerialCommand(String cmd) {
     Serial.print((int)(20.0 / currentScale * 100));
     Serial.print("%)");
     // if (scaleMutex != NULL) {
-      xSemaphoreGive(scaleMutex);
+    xSemaphoreGive(scaleMutex);
     // }
   } else if (cmd.startsWith("scale ")) {
     int newScale = cmd.substring(6).toInt();
     if (newScale >= minScale && newScale <= maxScale) {
       // if (scaleMutex != NULL) {
-        xSemaphoreTake(scaleMutex, portMAX_DELAY);
+      xSemaphoreTake(scaleMutex, portMAX_DELAY);
       // }
       currentScale = newScale;
       scaleChanged = true;
@@ -1818,7 +1826,7 @@ void handleSerialCommand(String cmd) {
       Serial.print((int)(20.0 / currentScale * 100));
       Serial.print("%)");
       // if (scaleMutex != NULL) {
-        xSemaphoreGive(scaleMutex);
+      xSemaphoreGive(scaleMutex);
       // }
     } else {
       Serial.print("Factor must be between ");
@@ -1884,12 +1892,13 @@ void setup() {
   Serial.begin(115200);
   delay(500);
 
-  // LED Blink Sequence
-  pinMode(LED_PIN, OUTPUT);
+  led.begin();  // switches on adafruits neopixel
   for (int i = 0; i < 3; i++) {
-    digitalWrite(LED_PIN, HIGH);
+    led.setPixelColor(0, led.Color(0, 100, 0));  // green, not too bright
+    led.show();
     delay(200);
-    digitalWrite(LED_PIN, LOW);
+    led.clear();
+    led.show();
     delay(200);
   }
 
@@ -1899,7 +1908,7 @@ void setup() {
   Serial.println("ESP32 USB BLE MSX MOUSE - VERSION 01");
   Serial.println("https://github.com/rigr/ESP32_USB_MSX");
   Serial.println("NimBLE Version: 2.1.0 by h2zero");
-  Serial.print("ESP32 Chip ID: ");
+  Serial.print("ESP32-S3 Chip ID: ");
   Serial.printf("%04X%08X", (uint16_t)(chipid >> 32), (uint32_t)chipid);
   Serial.println("=====================================");
 
@@ -1927,8 +1936,8 @@ void setup() {
   }
   prefs.end();
 
-  Serial.println("Web: START via BOOT button (3s), STOP via BOOT button (6s)");
-  Serial.println("Commands: scale X | scale (show) | cal (calibration) | web (toggle) | s/d/scale/scan/list/select X | help");
+  Serial.println("Staqrt web interface via BOOT button (min. 3s)");
+  Serial.println("Commands: scale X | scale (show) | cal (calibration) | web | s/d/scale/scan/list/select X | help");
 
   snprintf(ssid, 23, "ESP32-%04X%08X", (uint16_t)(chipid >> 32), (uint32_t)chipid);
   Serial.println(ssid);
@@ -1971,10 +1980,10 @@ void setup() {
     Serial.println("USB Host started");
   }
 
-  Serial.println("Pull D35 to GND to scan and connect to devices");
-  Serial.println("BOOT Button (D0) - Press 3s to start calibration, 6s to stop");
+  Serial.println("Pull D15 to GND to scan and connect to devices");
+  Serial.println("BOOT Button (D0) - Press 3s to start calibration");
   Serial.println("ROLAND / MSX Mouse Emulation Ready!");
-  Serial.println("Serial: 'cal' to start calibration, 'web' to toggle web interface");
+  Serial.println("Serial: 'cal' to start calibration, 'web' to launch web interface");
   Serial.println("Type 'help' or 'h' for all commands");
 
   if (!mouseMap.valid) {
