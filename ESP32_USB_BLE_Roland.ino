@@ -125,7 +125,6 @@ enum MouseType {
 };
 
 MouseType currentMouseType = MOUSE_NONE;
-MouseType selectedMouseType = MOUSE_NONE;
 CalState calState = CAL_IDLE;
 bool collectingData = false;
 bool calReady = false;
@@ -1504,12 +1503,10 @@ void setupWebServer() {
   server.on("/select_mode", HTTP_GET, []() {
     String type = server.arg("type");
     if (type == "usb") {
-      selectedMouseType = MOUSE_USB;
       currentMouseType = MOUSE_USB;
       Serial.println("Mode selected: USB");
       usbHost.begin();
     } else if (type == "ble") {
-      selectedMouseType = MOUSE_BLE;
       currentMouseType = MOUSE_BLE;
       Serial.println("Mode selected: BLE");
     }
@@ -1849,6 +1846,15 @@ void handleSerialCommand(String cmd) {
   } else if (cmd.equals("cal")) {
     Serial.println("Starting calibration mode...");
     startCalibrationMode();
+
+  } else if (cmd.equals("usb")) {
+    currentMouseType = MOUSE_USB;
+    Serial.println("USB MODE");
+
+  } else if (cmd.equals("ble")) {
+    currentMouseType = MOUSE_BLE;
+    Serial.println("BLE MODE");
+
   } else if (cmd.equals("help") || cmd.equals("h")) {
     Serial.println("=== MSX MOUSE COMMANDS ===");
     Serial.println("s - Scan & Connect first HID mouse");
@@ -1918,7 +1924,7 @@ void setup() {
     currentMouseType = MOUSE_BLE;
     if (prefs.getBytesLength("bleMap") == sizeof(mouseMap)) {
       prefs.getBytes("bleMap", &mouseMap, sizeof(mouseMap));
-      Serial.println("BLE Mapping loaded from NVS");
+      Serial.println("BLE Modus. Mapping loaded from NVS");
     }
     String lastAddr = prefs.getString("lastBLEAddr", "");
     if (lastAddr != "") {
@@ -1929,7 +1935,7 @@ void setup() {
     currentMouseType = MOUSE_USB;
     if (prefs.getBytesLength("usbMap") == sizeof(mouseMap)) {
       prefs.getBytes("usbMap", &mouseMap, sizeof(mouseMap));
-      Serial.println("USB Mapping loaded from NVS");
+      Serial.println("USB Modus. Mapping loaded from NVS");
     }
   }
   prefs.end();
@@ -1986,7 +1992,7 @@ void setup() {
 
   if (!mouseMap.valid) {
     Serial.println("*** NO CALIBRATION FOUND ***");
-    Serial.println("Please calibrate your mouse via web interface (hold BOOT 3s)");
+    Serial.println("Please calibrate your mouse via web interface (- hold BOOT > 3s)");
   }
 }
 
