@@ -6,10 +6,11 @@
 // IMPORTANT: Include order matters! EspUsbHost must be included BEFORE NimBLE
 // to avoid HID type conflicts. See: https://github.com/h2zero/NimBLE-Arduino/issues/715
 //
-// Board: ESP32-WROOM-32D (30 pins).  Board defintion 3.00 von espressif
+// Board: ESP32-S3-USB-OTG with two USB-ports
+// Board defintion 3.00 von espressif
 // NimBLE Version: 2.1.0 by h2zero
 //
-// rigr 2026-05-13
+// rigr 2026-05-16
 //
 // Still needs some more tests to check, if Roland Sampler will really accept the mouse
 // Feel free to inform me if it works or if it doesn't. Use "issues" on github
@@ -425,12 +426,14 @@ public:
     int8_t w = (int8_t)d[mouseMap.wheelByte];
 
     if (w != 0) {
-      if (scaleMutex != NULL) xSemaphoreTake(scaleMutex, portMAX_DELAY);
+      // if (scaleMutex != NULL) 
+      xSemaphoreTake(scaleMutex, portMAX_DELAY);
       currentScale -= w;
       if (currentScale < minScale) currentScale = minScale;
       if (currentScale > maxScale) currentScale = maxScale;
       scaleChanged = true;
-      if (scaleMutex != NULL) xSemaphoreGive(scaleMutex);
+      // if (scaleMutex != NULL) 
+      xSemaphoreGive(scaleMutex);
     }
 
     Serial.printf(" - Mouse %c%c - x=%d y=%d Zoom=%d%%\n",
@@ -769,18 +772,18 @@ void msxProtocolTask(void* parameter) {
       continue;
     }
 
-    if (scaleMutex != NULL) {
-      xSemaphoreTake(scaleMutex, portMAX_DELAY);
-    }
+    // if (scaleMutex != NULL) {
+    xSemaphoreTake(scaleMutex, portMAX_DELAY);
+    // }
     int16_t currentX = lastX;
     int16_t currentY = lastY;
     bool currentLeftBtn = leftBtn;
     bool currentRightBtn = rightBtn;
     lastX = 0;
     lastY = 0;
-    if (scaleMutex != NULL) {
-      xSemaphoreGive(scaleMutex);
-    }
+    // if (scaleMutex != NULL) {
+    xSemaphoreGive(scaleMutex);
+    // }
 
     mx += (currentX * -1);
     my += (currentY * -1);
@@ -990,6 +993,7 @@ void interpretMouseData(uint8_t* data, size_t len, int16_t& x, int16_t& y, int8_
   leftButton = (buttonByte & 0x01) != 0;
   rightButton = (buttonByte & 0x02) != 0;
 
+  /*  - debug output, not needed any more
   Serial.printf("Buttons: 0x%02X -> ", buttonByte);
   uint8_t state = buttonByte & 0x07;
   switch (state) {
@@ -1004,6 +1008,7 @@ void interpretMouseData(uint8_t* data, size_t len, int16_t& x, int16_t& y, int8_
     default: Serial.printf("0x%02X(?)", state); break;
   }
   Serial.printf(" L:%d R:%d", leftButton, rightButton);
+  */
 }
 
 // =================================================================
@@ -1062,8 +1067,10 @@ void notifyCB(NimBLERemoteCharacteristic* chr, uint8_t* data, size_t len, bool i
   // Fallback to HID parser
   else if (hidFmt.valid) {
     interpretMouseData(data, len, x, y, wheel, leftButton, rightButton);
-    Serial.print("HID PARSER: ");
-  }
+    /* debug output, not needed 
+    Serial.print(" - HID PARSER: ");
+    */
+    }
   else {
     Serial.println("No valid format! Use calibration.");
     return;
@@ -1075,9 +1082,9 @@ void notifyCB(NimBLERemoteCharacteristic* chr, uint8_t* data, size_t len, bool i
   bool prevLeftBtn = leftBtn;
   bool prevRightBtn = rightBtn;
 
-  if (scaleMutex != NULL) {
+  // if (scaleMutex != NULL) {
     xSemaphoreTake(scaleMutex, portMAX_DELAY);
-  }
+  // }
 
   lastX = x;
   lastY = y;
@@ -1085,17 +1092,17 @@ void notifyCB(NimBLERemoteCharacteristic* chr, uint8_t* data, size_t len, bool i
   rightBtn = rightButton;
   lastMouseUpdate = millis();
 
-  if (scaleMutex != NULL) {
+  // if (scaleMutex != NULL) {
     xSemaphoreGive(scaleMutex);
-  }
+  // }
 
   // =========================
   // SCROLL -> ZOOM
   // =========================
   if (wheel != 0) {
-    if (scaleMutex != NULL) {
+    // if (scaleMutex != NULL) {
       xSemaphoreTake(scaleMutex, portMAX_DELAY);
-    }
+    // }
 
     char oldScale = currentScale;
     currentScale -= wheel;
@@ -1105,16 +1112,18 @@ void notifyCB(NimBLERemoteCharacteristic* chr, uint8_t* data, size_t len, bool i
 
     if (oldScale != currentScale) {
       scaleChanged = true;
+      /* debug output
       Serial.print("ZOOM: Factor = ");
       Serial.print((int)currentScale);
       Serial.print(" (");
       Serial.print((int)(20.0 / currentScale * 100));
       Serial.print("%)");
+      */ 
     }
 
-    if (scaleMutex != NULL) {
+    // if (scaleMutex != NULL) {
       xSemaphoreGive(scaleMutex);
-    }
+    // }
   }
 
   // Debug output
@@ -1604,9 +1613,9 @@ void setupWebServer() {
 
   // Zoom Controls
   server.on("/zoom_out", HTTP_GET, []() {
-    if (scaleMutex != NULL) {
+    // if (scaleMutex != NULL) {
       xSemaphoreTake(scaleMutex, portMAX_DELAY);
-    }
+    // }
     if (currentScale > minScale) {
       currentScale--;
       scaleChanged = true;
@@ -1616,17 +1625,17 @@ void setupWebServer() {
       Serial.print((int)(20.0 / currentScale * 100));
       Serial.print("%)");
     }
-    if (scaleMutex != NULL) {
+    // if (scaleMutex != NULL) {
       xSemaphoreGive(scaleMutex);
-    }
+    // }
     server.sendHeader("Location", "/");
     server.send(302, "text/plain", "Redirecting...");
   });
 
   server.on("/zoom_in", HTTP_GET, []() {
-    if (scaleMutex != NULL) {
+    // if (scaleMutex != NULL) {
       xSemaphoreTake(scaleMutex, portMAX_DELAY);
-    }
+    // }
     if (currentScale < maxScale) {
       currentScale++;
       scaleChanged = true;
@@ -1636,17 +1645,17 @@ void setupWebServer() {
       Serial.print((int)(20.0 / currentScale * 100));
       Serial.print("%)");
     }
-    if (scaleMutex != NULL) {
+    // if (scaleMutex != NULL) {
       xSemaphoreGive(scaleMutex);
-    }
+    // }
     server.sendHeader("Location", "/");
     server.send(302, "text/plain", "Redirecting...");
   });
 
   server.on("/zoom_reset", HTTP_GET, []() {
-    if (scaleMutex != NULL) {
+    // if (scaleMutex != NULL) {
       xSemaphoreTake(scaleMutex, portMAX_DELAY);
-    }
+    // }
     currentScale = 15;
     scaleChanged = true;
     Serial.print("ZOOM RESET: Factor = ");
@@ -1654,9 +1663,9 @@ void setupWebServer() {
     Serial.print(" (");
     Serial.print((int)(20.0 / currentScale * 100));
     Serial.print("%)");
-    if (scaleMutex != NULL) {
+    // if (scaleMutex != NULL) {
       xSemaphoreGive(scaleMutex);
-    }
+    // }
     server.sendHeader("Location", "/");
     server.send(302, "text/plain", "Redirecting...");
   });
@@ -1665,9 +1674,9 @@ void setupWebServer() {
     if (server.hasArg("value")) {
       int newScale = server.arg("value").toInt();
       if (newScale >= minScale && newScale <= maxScale) {
-        if (scaleMutex != NULL) {
+        // if (scaleMutex != NULL) {
           xSemaphoreTake(scaleMutex, portMAX_DELAY);
-        }
+        // }
         currentScale = newScale;
         scaleChanged = true;
         Serial.print("Web: Factor set to ");
@@ -1675,9 +1684,9 @@ void setupWebServer() {
         Serial.print(" (");
         Serial.print((int)(20.0 / currentScale * 100));
         Serial.print("%)");
-        if (scaleMutex != NULL) {
+        // if (scaleMutex != NULL) {
           xSemaphoreGive(scaleMutex);
-        }
+        // }
       }
     }
     server.sendHeader("Location", "/");
@@ -1784,23 +1793,23 @@ void handleSerialCommand(String cmd) {
     Serial.println("MSX: Resetting...");
     ESP.restart();
   } else if (cmd.equals("scale")) {
-    if (scaleMutex != NULL) {
+    // if (scaleMutex != NULL) {
       xSemaphoreTake(scaleMutex, portMAX_DELAY);
-    }
+    // }
     Serial.print("Current Factor: ");
     Serial.print((int)currentScale);
     Serial.print(" (");
     Serial.print((int)(20.0 / currentScale * 100));
     Serial.print("%)");
-    if (scaleMutex != NULL) {
+    // if (scaleMutex != NULL) {
       xSemaphoreGive(scaleMutex);
-    }
+    // }
   } else if (cmd.startsWith("scale ")) {
     int newScale = cmd.substring(6).toInt();
     if (newScale >= minScale && newScale <= maxScale) {
-      if (scaleMutex != NULL) {
+      // if (scaleMutex != NULL) {
         xSemaphoreTake(scaleMutex, portMAX_DELAY);
-      }
+      // }
       currentScale = newScale;
       scaleChanged = true;
       Serial.print("Factor set to: ");
@@ -1808,9 +1817,9 @@ void handleSerialCommand(String cmd) {
       Serial.print(" (");
       Serial.print((int)(20.0 / currentScale * 100));
       Serial.print("%)");
-      if (scaleMutex != NULL) {
+      // if (scaleMutex != NULL) {
         xSemaphoreGive(scaleMutex);
-      }
+      // }
     } else {
       Serial.print("Factor must be between ");
       Serial.print((int)minScale);
