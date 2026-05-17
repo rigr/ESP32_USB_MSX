@@ -1,6 +1,8 @@
 # ESP32-S3 USB & BLE Mouse → Roland Sampler / MSX Protocol
 **RiGr – April 2026**
 
+![ESP32-S3 N16R8 with wires connected](/pix/20260517_121703_.jpg)
+
 **UPDATE 05-2026:** The sketch `ESP32_USB_BLE_Roland.ino` now supports **both USB and BLE mice**.
 
 Tested today (2026-05-17) just an hour ago and it works with my Roland S-750 - with USB and BLE mice. :)
@@ -10,6 +12,14 @@ Tested today (2026-05-17) just an hour ago and it works with my Roland S-750 - w
 This project allows you to connect a standard USB or Bluetooth Low Energy (BLE) mouse to an **ESP32-S3** (N16R8 board) and convert the mouse signals into the classic MSX mouse protocol.  
 The Roland Sampler uses exactly the same protocol as old MSX computers (but does that with a higher strobe frequency).
 
+![Roland S-750](/pix/20260517_121508_.jpg)
+
+To mice I just worked with:
+<p float="left">
+  <img src="pix/20260517_121328_.jpg" width="48%" />
+  <img src="pix/20260517_121334_.jpg" width="48%" />
+</p>
+
 ### Features
 - Direct USB-Host support for USB mice
 - BLE mouse support (via NimBLE)
@@ -17,6 +27,8 @@ The Roland Sampler uses exactly the same protocol as old MSX computers (but does
 - Mouse movement processed on Core 1 in a dedicated task → minimal jitter
 - Zoom function using the mouse wheel (20 % – 200 %)
 - Serial output for debugging
+
+![ESP32-s§ N16 R8 with adapter to connect OTG cable with USB-dongle for mouse](/pix/20260517_121315_.jpg)
 
 ### Hardware
 - **ESP32-S3 N16R8** (Dual USB port version recommended)  
@@ -81,7 +93,15 @@ from this repository:
 4. Upload the sketch.
 
 The sketch starts automatically. Once a USB or BLE mouse is detected, movements and clicks will appear in the serial monitor.
-To lanuch the web interface you need to press the BOOT button more than 3 seconds. You can then adjust all sorts of settings and calibrate the mouse connected.
+To lanuch the web interface you need to press the BOOT button on the ESP32-S3-board more than 3 seconds. You can then adjust all sorts of settings and calibrate the mouse connected.
+
+Web interface looks like that (activated by pressing BOOT button on board for more than 3 seconds):
+<p float="left">
+  <img src="pix/web_01.png" width="24%" />
+  <img src="pix/web_02.png" width="24%" />
+  <img src="pix/web_03.png" width="24%" />
+  <img src="pix/web_04.png" width="24%" />
+</p>
 
 ---
 
