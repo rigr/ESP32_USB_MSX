@@ -14,7 +14,7 @@ The Roland Sampler uses exactly the same protocol as old MSX computers (but does
 
 ![Roland S-750](/pix/20260517_121508_.jpg)
 
-To mice I just worked with:
+Two mice I just worked with:
 <p float="left">
   <img src="pix/20260517_121328_.jpg" width="48%" />
   <img src="pix/20260517_121334_.jpg" width="48%" />
