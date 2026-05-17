@@ -37,9 +37,9 @@ The Roland Sampler uses exactly the same protocol as old MSX computers.
 | GPIO 12      | MX2 – Data Bit 2          | Pin 3           |
 | GPIO 11      | MX3 – Data Bit 3          | Pin 4           |
 | Vin          | 5V                        | Pin 5           |
-| GPIO 8       | BTN_L – Left Mouse Button | Pin 6           |
+| GPIO 46      | BTN_L – Left Mouse Button | Pin 6           |
 | GPIO 3       | BTN_R – Right Mouse Button| Pin 7           |
-| GPIO 46      | STROBE / CS (Input)       | Pin 8           |
+| GPIO 8       | STROBE / CS (Input)       | Pin 8           |
 | **GPIO 15**  | **Manual Scan Trigger**   | -               |
 | GND          | Ground                    | Pin 9           |
 
