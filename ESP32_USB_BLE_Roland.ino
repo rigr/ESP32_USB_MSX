@@ -155,9 +155,9 @@ const uint8_t MX0_PIN = 14;
 const uint8_t MX1_PIN = 13;
 const uint8_t MX2_PIN = 12;
 const uint8_t MX3_PIN = 11;
-const uint8_t MX4_PIN = 8;
-const uint8_t MX5_PIN = 3;
-const uint8_t CS_PIN = 46;
+const uint8_t MX4_PIN = 46;
+const uint8_t MX5_PIN =  3;
+const uint8_t CS_PIN =   8;
 const uint8_t MAN_SCAN = 15;
 const uint8_t BOOT_PIN = 0;
 
@@ -212,26 +212,20 @@ public:
     uint8_t* d = t->data_buffer;
     int len = t->actual_num_bytes;
     if (len > MAX_LEN) return;
-
     if (!collecting && mouseMap.valid && currentMouseType == MOUSE_USB) {
       printRaw(d, len);
       runMouse(d, len);
       return;
     }
-
     if (!collecting) {
       printRaw(d, len);
       return;
     }
-
     if (buffers[len].count >= MAX_SAMPLES) return;
-
     memcpy(buffers[len].data[buffers[len].count], d, len);
     buffers[len].count++;
     sampleCounter = buffers[len].count;
-
     Serial.printf("Collecting (%d/%d)\n", buffers[len].count, MAX_SAMPLES);
-
     if (buffers[len].count >= MAX_SAMPLES) {
       collecting = false;
       ready = true;
@@ -629,14 +623,14 @@ void startCalibrationMode() {
   server.begin();
 
   for (int i = 0; i < 3; i++) {
-    led.setPixelColor(0, led.Color(100, 32, 0)); // kind of orange
+    led.setPixelColor(0, led.Color(100, 32, 0));  // kind of orange
     led.show();
     delay(100);
     led.clear();
     led.show();
     delay(100);
   }
-  
+
   Serial.println("Calibration web interface started");
   Serial.println("Connect to WiFi: ESP32_MOUSE / 1234567890");
   Serial.println("Open: http://" + IP.toString());
@@ -768,7 +762,7 @@ void msxProtocolTask(void* parameter) {
 
   Serial.println("MSX Protocol Task started on Core 1");
   Serial.println("Pin Configuration:");
-  Serial.println("MX0=14, MX1=13, MX2=12, MX3=11, MX4=8(L), MX5=3(R), CS=46, SCAN=15");
+  Serial.println("MX0=14, MX1=13, MX2=12, MX3=11, MX4=46(L), MX5=3(R), CS=8, SCAN=15");
   Serial.println(" ");
   Serial.print("Initial Zoom Factor: ");
   Serial.print((int)currentScale);
@@ -1485,7 +1479,7 @@ void setupWebServer() {
     html += "<div class='section'>";
     html += "<h3>DEVICE INFO</h3>";
     html += "<div class='data-row'><span class='data-label'>Board:</span><span class='data-value'>" + String(ssid) + "</span></div>";
-    html += "<div class='data-row'><span class='data-label'>Pins:</span><span class='data-value'>Data: 14,13,12,11, Buttons: 8,3, Strobe: 46, Scan: 15</span></div>";
+    html += "<div class='data-row'><span class='data-label'>Pins:</span><span class='data-value'>Data: 14,13,12,11, Buttons: 46,3, Strobe: 8, Scan: 15</span></div>";
     html += "<div class='data-row'><span class='data-label'>GPIO Mode:</span><span class='data-value'>Direct Register Access synchronized to Strobe</span></div>";
     html += "<div class='data-row'><span class='data-label'>Uptime:</span><span class='data-value'>" + String(millis() / 1000) + "s</span></div>";
     html += "<h4>https://github.com/rigr/ESP32_USB_MSX";
