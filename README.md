@@ -1,13 +1,14 @@
 # ESP32-S3 USB & BLE Mouse → Roland Sampler / MSX Protocol
 **RiGr – April 2026**
 
-**UPDATE 05-2026:** The sketch `ESP32_USB_BLE_Roland.ino` now supports **both USB and BLE mice**.  
-However, this version has **not yet been tested with the Roland Sampler**.
+**UPDATE 05-2026:** The sketch `ESP32_USB_BLE_Roland.ino` now supports **both USB and BLE mice**.
+
+Tested today (2026-05-17) just an hour ago and it works with my Roland S-750 - with USB and BLE mice. :)
 
 ---
 
 This project allows you to connect a standard USB or Bluetooth Low Energy (BLE) mouse to an **ESP32-S3** (N16R8 board) and convert the mouse signals into the classic MSX mouse protocol.  
-The Roland Sampler uses exactly the same protocol as old MSX computers.
+The Roland Sampler uses exactly the same protocol as old MSX computers (but does that with a higher strobe frequency).
 
 ### Features
 - Direct USB-Host support for USB mice
