@@ -74,12 +74,14 @@ USB: buttons=0x00(  ), x=0, y=0, wheel=1 Z:120%
 - Default value is **100 %**.
 
 ### Important Library Note
-This project requires the **EspUsbHost** library by tanakamasayuki.
+This project requires the **EspUsbHost** library by tanakamasayuki. He worked on the library in the meanwhile and I did not yet find the time to rewrite  my code, so you should use the "old" library files you find here.
 
-**You must manually copy the two files**  
-`EspUsbHost.cpp` and `EspUsbHost.h`  
-from this repository:  
-→ https://github.com/tanakamasayuki/EspUsbHost
+**You have to manually copy the two files**  
+`EspUsbHost.cpp` →  https://github.com/rigr/ESP32_USB_MSX/blob/main/EspUsbHost.cpp
+
+and `EspUsbHost.h` → https://github.com/rigr/ESP32_USB_MSX/blob/main/EspUsbHost.h
+
+that were originaly coded and published by tanakamasayuki (→ https://github.com/tanakamasayuki/EspUsbHost ) 
 
 **Both files must be placed in the same folder as your `ESP32_USB_BLE_Roland.ino` file.**
 
