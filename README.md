@@ -73,7 +73,7 @@ USB: buttons=0x00(  ), x=0, y=0, wheel=1 Z:120%
 - Use the **mouse wheel** to adjust the mouse zoom between **20 % and 200 %**.
 - Default value is **100 %**.
 
-### Important Library Note
+### Important Library Note (June 2026)
 This project requires the **EspUsbHost** library by tanakamasayuki. He worked on the library in the meanwhile and I did not yet find the time to rewrite  my code, so you should use the "old" library files you find here.
 
 **You have to manually copy the two files**  
