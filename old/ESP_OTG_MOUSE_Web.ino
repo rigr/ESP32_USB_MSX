@@ -1,6 +1,6 @@
 // =======================================================================
 // ESP32-S3 USB Mouse → Roland Sampler
-// ROBUST AUTO-LEARNING VERSION + WEB INTERFACE (on demand)
+// ROBUST AUTO-LEARNING VERSION + WEB INTERFACE (on demand) 
 // MSX PART UNCHANGED from original BLE - Version in other repo
 //
 // https://github.com/rigr/ESP32_USB_MSX
